@@ -1,0 +1,6 @@
+LaTeX/*.log
+LaTeX/*.gz
+LaTeX/*.aux
+LaTeX/*.out
+Data/*.gz
+
