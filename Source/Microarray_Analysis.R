@@ -11,9 +11,10 @@ library(plyr)
 library(MASS)
 library(Rtsne)
 
-setwd("~/Documents/Uni_Work/Introduction_to_Bioinformatics/Project/Phase_1")
+setwd("~/Documents/Uni_Work/Introduction_to_Bioinformatics/Project/Phase_2")
 series <- "GSE48558"
 platform <- "GPL6244"
+pval_threshold <- 0.05
 
 gset <- getGEO("GSE48558", GSEMatrix=TRUE, AnnotGPL=TRUE, destdir="Data/")
 if (length(gset) > 1) idx <- grep(platform, attr(gset, "names")) else idx <- 1
@@ -97,3 +98,44 @@ ggplot(tsne_samples, aes(X1, X2, color=Group)) + geom_point(size=3)
 dev.off()
 
 ### Group Correlation: This is basically already done in the above pheatmap, after the removal of the outlier
+
+### Only take the relevant group of samples for analysis
+indices_to_remove <- sort(match(c("GSM1180912", "GSM1180893", "GSM1180889",
+                                  "GSM1180887", "GSM1180892", "GSM1180888",
+                                  "GSM1180891", "GSM1180890", "GSM1180826",
+                                  "GSM1180794", "GSM1180824", "GSM1180790",
+                                  "GSM1180838", "GSM1180834", "GSM1180839",
+                                  "GSM1180831", "GSM1180847", "GSM1180843",
+                                  "GSM1180820", "GSM1180845", "GSM1180841",
+                                  "GSM1180818", "GSM1180829"),
+                                gset$geo_accession))
+ex <- ex[,-indices_to_remove]
+gr <- gr[-indices_to_remove]
+gset <- gset[,-indices_to_remove]
+pdf("Results/Corr_Heatmap_Relevant_Samples.pdf", width=15, height=15)
+pheatmap(cor(ex), labels_row=gr)
+dev.off()
+
+### Differential Expression Analysis
+gset$description <- gr
+fac_gr <- factor(gr)
+gset$description <- fac_gr
+design <- model.matrix(~description + 0, gset)
+colnames(design) <- levels(fac_gr)
+
+fit <- lmFit(gset, design)
+cont.matrix <- makeContrasts(AML - Healthy, levels=design)
+fit2 <- contrasts.fit(fit, cont.matrix)
+fit2 <- eBayes(fit2, 0.01)
+results <- topTable(fit2, adjust="fdr", sort.by='B', number=Inf)
+
+results <- subset(results, select=c("Gene.symbol", "Gene.ID", "adj.P.Val", "logFC"))
+write.table(results, file="Results/Differential_Expression_AML_vs_Healthy.txt", row.names=FALSE, sep='\t', quote=FALSE)
+
+### Save the names of the significantly differentiated genes
+aml.up <- subset(results, logFC > 1 & adj.P.Val < pval_threshold)
+aml.up.genes <- unique(as.character(strsplit2(aml.up$Gene.symbol, "///")))
+write.table(aml.up.genes, file="Results/AML_vs_Healthy_Up_Genes.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+aml.down <- subset(results, logFC < -1 & adj.P.Val < pval_threshold)
+aml.down.genes <- unique(as.character(strsplit2(aml.down$Gene.symbol, "///")))
+write.table(aml.down.genes, file="Results/AML_vs_Healthy_Down_Genes.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
