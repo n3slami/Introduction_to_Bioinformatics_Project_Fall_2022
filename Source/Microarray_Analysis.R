@@ -133,9 +133,9 @@ results <- subset(results, select=c("Gene.symbol", "Gene.ID", "adj.P.Val", "logF
 write.table(results, file="Results/Differential_Expression_AML_vs_Healthy.txt", row.names=FALSE, sep='\t', quote=FALSE)
 
 ### Save the names of the significantly differentiated genes
-aml.up <- subset(results, logFC > 1 & adj.P.Val < pval_threshold)
+aml.up <- subset(results, logFC < -1 & adj.P.Val < pval_threshold)
 aml.up.genes <- unique(as.character(strsplit2(aml.up$Gene.symbol, "///")))
 write.table(aml.up.genes, file="Results/AML_vs_Healthy_Up_Genes.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
-aml.down <- subset(results, logFC < -1 & adj.P.Val < pval_threshold)
+aml.down <- subset(results, logFC > 1 & adj.P.Val < pval_threshold)
 aml.down.genes <- unique(as.character(strsplit2(aml.down$Gene.symbol, "///")))
 write.table(aml.down.genes, file="Results/AML_vs_Healthy_Down_Genes.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
